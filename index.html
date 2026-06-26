@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preconstruction Scope Analyzer</title>
+  <style>
+    :root {
+      --bg-dark: #1a1a1a;
+      --bg-panel: #2d2d2d;
+      --text-primary: #ffffff;
+      --text-secondary: #b0b0b0;
+      --accent-yellow: #ffd700;
+      --accent-orange: #ff8c00;
+      --danger: #ff4444;
+      --success: #44dd44;
+      --border: #444;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: var(--bg-panel);
+      border-bottom: 2px solid var(--accent-yellow);
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+
+    header h1 {
+      color: var(--accent-yellow);
+      font-size: 28px;
+      margin-bottom: 5px;
+    }
+
+    header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .tab-button {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab-button:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-button.active {
+      color: var(--accent-yellow);
+      border-bottom-color: var(--accent-yellow);
+    }
+
+    .panel {
+      display: none;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+
+    .button {
+      background: var(--accent-yellow);
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+
+    .button:hover {
+      opacity: 0.9;
+    }
+
+    .button-secondary {
+      background: var(--bg-panel);
+      color: var(--accent-yellow);
+      border: 1px solid var(--accent-yellow);
+    }
+
+    .button-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    input, select, textarea {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-yellow);
+      box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+    }
+
+    .project-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .project-card:hover {
+      border-color: var(--accent-yellow);
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.1);
+    }
+
+    .project-card h3 {
+      color: var(--accent-yellow);
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    .project-card p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .project-stats {
+      display: flex;
+      gap: 20px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .stat {
+      color: var(--text-secondary);
+    }
+
+    .stat strong {
+      color: var(--accent-yellow);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: rgba(255, 215, 0, 0.05);
+      color: var(--accent-yellow);
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+
+    tr:hover {
+      background: rgba(255, 215, 0, 0.02);
+    }
+
+    .alert {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+
+    .alert-info {
+      background: rgba(100, 149, 237, 0.1);
+      border-left: 3px solid #6495ed;
+      color: #87ceeb;
+    }
+
+    .alert-success {
+      background: rgba(68, 221, 68, 0.1);
+      border-left: 3px solid var(--success);
+      color: var(--success);
+    }
+
+    .alert-error {
+      background: rgba(255, 68, 68, 0.1);
+      border-left: 3px solid var(--danger);
+      color: #ff8888;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🏗️ Preconstruction Scope Analyzer</h1>
+      <p>Compare bids against specifications to identify scope gaps</p>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-button active" onclick="switchTab('dashboard', this)">Dashboard</button>
+      <button class="tab-button" onclick="switchTab('scope-builder', this)">Scope Builder</button>
+      <button class="tab-button" onclick="switchTab('bid-upload', this)">Upload Bids</button>
+      <button class="tab-button" onclick="switchTab('comparison', this)">Compare</button>
+      <button class="tab-button" onclick="switchTab('gaps', this)">Gaps</button>
+      <button class="tab-button" onclick="switchTab('settings', this)">Settings</button>
+    </div>
+
+    <!-- DASHBOARD TAB -->
+    <div id="panel-dashboard" class="panel active">
+      <h2 style="margin-bottom: 20px;">Projects</h2>
+      
+      <button class="button" onclick="showCreateProjectForm()">+ New Project</button>
+
+      <div id="create-project-form" class="card hidden" style="margin-top: 20px;">
+        <h3>Create New Project</h3>
+        <div class="form-group">
+          <label>Project Name *</label>
+          <input type="text" id="project-name" placeholder="Main St Commercial Building">
+        </div>
+        <div class="form-group">
+          <label>Address</label>
+          <input type="text" id="project-address" placeholder="123 Main St, Downtown">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="project-description" placeholder="Brief project overview..." rows="3"></textarea>
+        </div>
+        <button class="button" onclick="createProject()">Create Project</button>
+        <button class="button button-secondary" onclick="hideCreateProjectForm()" style="margin-left: 10px;">Cancel</button>
+      </div>
+
+      <div id="projects-list" class="project-grid" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- SCOPE BUILDER TAB -->
+    <div id="panel-scope-builder" class="panel">
+      <h2>Scope Builder</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">Create a scope checklist for your project.</p>
+      <div id="scope-builder-content"></div>
+    </div>
+
+    <!-- BID UPLOAD TAB -->
+    <div id="panel-bid-upload" class="panel">
+      <h2>Upload Bids</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">Upload bid documents (Excel, PDF, or paste data).</p>
+      <div id="bid-upload-content"></div>
+    </div>
+
+    <!-- COMPARISON TAB -->
+    <div id="panel-comparison" class="panel">
+      <h2>Bid Comparison</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">Compare bids against your scope checklist.</p>
+      <div id="comparison-content"></div>
+    </div>
+
+    <!-- GAPS TAB -->
+    <div id="panel-gaps" class="panel">
+      <h2>Scope Gaps</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">Review gaps between specifications and bids.</p>
+      <div id="gaps-content"></div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="panel-settings" class="panel">
+      <h2>Settings</h2>
+      <div class="card">
+        <h3>Data Management</h3>
+        <button class="button" onclick="exportData()">📥 Export All Data</button>
+        <button class="button button-secondary" onclick="importData()" style="margin-left: 10px;">📤 Import Data</button>
+        <button class="button button-danger" onclick="clearAllData()" style="margin-left: 10px; margin-top: 10px;">🗑️ Clear All Data (Permanent)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== DATA MANAGEMENT ====================
+    const DATA_KEY = 'preconstruction_data';
+
+    function initializeData() {
+      if (!localStorage.getItem(DATA_KEY)) {
+        localStorage.setItem(DATA_KEY, JSON.stringify({
+          projects: [],
+          scopes: [],
+          bids: [],
+          gaps: []
+        }));
+      }
+    }
+
+    function getData() {
+      return JSON.parse(localStorage.getItem(DATA_KEY) || '{}');
+    }
+
+    function saveData(data) {
+      localStorage.setItem(DATA_KEY, JSON.stringify(data));
+    }
+
+    function generateId() {
+      return 'id-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // ==================== TAB SWITCHING ====================
+    function switchTab(tabName, element) {
+      // Hide all panels
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+
+      // Show selected panel
+      document.getElementById('panel-' + tabName).classList.add('active');
+      element.classList.add('active');
+
+      // Load tab content
+      if (tabName === 'scope-builder') loadScopeBuilder();
+      if (tabName === 'bid-upload') loadBidUpload();
+      if (tabName === 'comparison') loadComparison();
+      if (tabName === 'gaps') loadGaps();
+    }
+
+    // ==================== DASHBOARD ====================
+    function showCreateProjectForm() {
+      document.getElementById('create-project-form').classList.remove('hidden');
+    }
+
+    function hideCreateProjectForm() {
+      document.getElementById('create-project-form').classList.add('hidden');
+      document.getElementById('project-name').value = '';
+      document.getElementById('project-address').value = '';
+      document.getElementById('project-description').value = '';
+    }
+
+    function createProject() {
+      const name = document.getElementById('project-name').value.trim();
+      const address = document.getElementById('project-address').value.trim();
+      const description = document.getElementById('project-description').value.trim();
+
+      if (!name) {
+        alert('Project name is required');
+        return;
+      }
+
+      const data = getData();
+      const project = {
+        id: generateId(),
+        name,
+        address,
+        description,
+        created_at: new Date().toISOString(),
+        scopes: [],
+        bids: []
+      };
+
+      data.projects.push(project);
+      saveData(data);
+
+      hideCreateProjectForm();
+      renderProjects();
+      showAlert('Project created!', 'success');
+    }
+
+    function renderProjects() {
+      const data = getData();
+      const container = document.getElementById('projects-list');
+
+      if (data.projects.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary);">No projects yet. Create one to get started.</p>';
+        return;
+      }
+
+      container.innerHTML = data.projects.map(project => `
+        <div class="project-card" onclick="selectProject('${project.id}')">
+          <h3>${project.name}</h3>
+          <p>${project.address || 'No address'}</p>
+          <p style="font-size: 13px; color: var(--text-secondary);">${project.description || 'No description'}</p>
+          <div class="project-stats">
+            <span class="stat">Scopes: <strong>${project.scopes ? project.scopes.length : 0}</strong></span>
+            <span class="stat">Bids: <strong>${project.bids ? project.bids.length : 0}</strong></span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectProject(projectId) {
+      // Store selected project
+      sessionStorage.setItem('selected_project_id', projectId);
+      
+      // Switch to scope builder
+      const btn = document.querySelector('.tab-button:nth-child(2)');
+      switchTab('scope-builder', btn);
+    }
+
+    function getSelectedProject() {
+      const projectId = sessionStorage.getItem('selected_project_id');
+      if (!projectId) return null;
+      
+      const data = getData();
+      return data.projects.find(p => p.id === projectId);
+    }
+
+    // ==================== SCOPE BUILDER ====================
+    function loadScopeBuilder() {
+      const project = getSelectedProject();
+      if (!project) {
+        document.getElementById('scope-builder-content').innerHTML = 
+          '<div class="alert alert-info">Select a project from the Dashboard first.</div>';
+        return;
+      }
+
+      const data = getData();
+      const projectScope = data.scopes.find(s => s.project_id === project.id);
+
+      let html = `<div class="card">
+        <h3>${project.name}</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">Create a scope checklist of what should be included in bids for this project.</p>`;
+
+      if (!projectScope) {
+        html += `<button class="button" onclick="createScope()">+ Create Scope Checklist</button>`;
+      } else {
+        html += `
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Category</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${projectScope.items.map((item, idx) => `
+                <tr>
+                  <td>${item.text}</td>
+                  <td>${item.category || '-'}</td>
+                  <td><button class="button button-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="deleteScope('${project.id}', ${idx})">Delete</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <button class="button" onclick="showAddScopeItem()" style="margin-top: 15px;">+ Add Item</button>
+        `;
+      }
+
+      html += '</div>';
+      document.getElementById('scope-builder-content').innerHTML = html;
+    }
+
+    function createScope() {
+      const project = getSelectedProject();
+      const data = getData();
+
+      const scope = {
+        id: generateId(),
+        project_id: project.id,
+        created_at: new Date().toISOString(),
+        items: []
+      };
+
+      data.scopes.push(scope);
+      saveData(data);
+      loadScopeBuilder();
+      showAlert('Scope checklist created!', 'success');
+    }
+
+    function showAddScopeItem() {
+      const project = getSelectedProject();
+      const html = `
+        <div class="card">
+          <h3>Add Scope Item</h3>
+          <div class="form-group">
+            <label>Item Description *</label>
+            <input type="text" id="scope-item-text" placeholder="e.g., Rough electrical wiring">
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="scope-item-category">
+              <option value="">Select category</option>
+              <option value="rough-in">Rough-In</option>
+              <option value="finish">Finish</option>
+              <option value="permits">Permits & Admin</option>
+              <option value="cleanup">Cleanup</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <button class="button" onclick="addScopeItem('${project.id}')">Add Item</button>
+          <button class="button button-secondary" onclick="loadScopeBuilder()" style="margin-left: 10px;">Cancel</button>
+        </div>
+      `;
+      document.getElementById('scope-builder-content').innerHTML = html;
+    }
+
+    function addScopeItem(projectId) {
+      const text = document.getElementById('scope-item-text').value.trim();
+      const category = document.getElementById('scope-item-category').value;
+
+      if (!text) {
+        alert('Item description is required');
+        return;
+      }
+
+      const data = getData();
+      const scope = data.scopes.find(s => s.project_id === projectId);
+
+      scope.items.push({
+        id: generateId(),
+        text,
+        category
+      });
+
+      saveData(data);
+      loadScopeBuilder();
+      showAlert('Item added!', 'success');
+    }
+
+    function deleteScope(projectId, itemIdx) {
+      if (confirm('Delete this scope item?')) {
+        const data = getData();
+        const scope = data.scopes.find(s => s.project_id === projectId);
+        scope.items.splice(itemIdx, 1);
+        saveData(data);
+        loadScopeBuilder();
+      }
+    }
+
+    // ==================== BID UPLOAD ====================
+    function loadBidUpload() {
+      const project = getSelectedProject();
+      if (!project) {
+        document.getElementById('bid-upload-content').innerHTML = 
+          '<div class="alert alert-info">Select a project from the Dashboard first.</div>';
+        return;
+      }
+
+      const data = getData();
+      const bids = data.bids.filter(b => b.project_id === project.id);
+
+      let html = `
+        <div class="card">
+          <h3>Upload Bid for ${project.name}</h3>
+          <div class="form-group">
+            <label>Subcontractor Name *</label>
+            <input type="text" id="bid-sub-name" placeholder="e.g., Electrical Pros Inc">
+          </div>
+          <div class="form-group">
+            <label>Bid Total Amount</label>
+            <input type="number" id="bid-total-amount" placeholder="125000">
+          </div>
+          <div class="form-group">
+            <label>Bid Items (paste Excel data or enter manually)</label>
+            <textarea id="bid-items-text" placeholder="Description&#10;Rough wiring&#10;Permits&#10;Testing&#10;..." rows="8"></textarea>
+          </div>
+          <button class="button" onclick="parseBidItems('${project.id}')">Add Bid</button>
+        </div>
+      `;
+
+      if (bids.length > 0) {
+        html += `
+          <div style="margin-top: 30px;">
+            <h3>Bids for this Project</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Subcontractor</th>
+                  <th>Total Amount</th>
+                  <th>Items</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${bids.map(bid => `
+                  <tr>
+                    <td>${bid.subcontractor_name}</td>
+                    <td>$${bid.total_amount || '—'}</td>
+                    <td>${bid.items ? bid.items.length : 0}</td>
+                    <td><button class="button button-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteBid('${bid.id}')">Delete</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      document.getElementById('bid-upload-content').innerHTML = html;
+    }
+
+    function parseBidItems(projectId) {
+      const subName = document.getElementById('bid-sub-name').value.trim();
+      const totalAmount = parseFloat(document.getElementById('bid-total-amount').value) || 0;
+      const itemsText = document.getElementById('bid-items-text').value.trim();
+
+      if (!subName) {
+        alert('Subcontractor name is required');
+        return;
+      }
+
+      if (!itemsText) {
+        alert('At least one bid item is required');
+        return;
+      }
+
+      const items = itemsText.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(text => ({
+          id: generateId(),
+          text
+        }));
+
+      const data = getData();
+      const bid = {
+        id: generateId(),
+        project_id: projectId,
+        subcontractor_name: subName,
+        total_amount: totalAmount,
+        items,
+        created_at: new Date().toISOString()
+      };
+
+      data.bids.push(bid);
+      saveData(data);
+
+      loadBidUpload();
+      showAlert(`Bid from ${subName} added!`, 'success');
+    }
+
+    function deleteBid(bidId) {
+      if (confirm('Delete this bid?')) {
+        const data = getData();
+        data.bids = data.bids.filter(b => b.id !== bidId);
+        saveData(data);
+        loadBidUpload();
+      }
+    }
+
+    // ==================== COMPARISON ====================
+    function loadComparison() {
+      const project = getSelectedProject();
+      if (!project) {
+        document.getElementById('comparison-content').innerHTML = 
+          '<div class="alert alert-info">Select a project from the Dashboard first.</div>';
+        return;
+      }
+
+      const data = getData();
+      const scope = data.scopes.find(s => s.project_id === project.id);
+      const bids = data.bids.filter(b => b.project_id === project.id);
+
+      if (!scope || scope.items.length === 0) {
+        document.getElementById('comparison-content').innerHTML = 
+          '<div class="alert alert-info">Create a scope checklist first (Scope Builder tab).</div>';
+        return;
+      }
+
+      if (bids.length === 0) {
+        document.getElementById('comparison-content').innerHTML = 
+          '<div class="alert alert-info">Upload at least one bid first (Upload Bids tab).</div>';
+        return;
+      }
+
+      // Run comparison
+      const comparisons = runComparison(scope, bids);
+
+      let html = `<h3>Bid vs. Scope Comparison</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">✓ = matched | ✗ = missing | ? = unclear</p>`;
+
+      comparisons.forEach(comp => {
+        html += `
+          <div class="card">
+            <h4>${comp.subcontractor_name} - $${comp.total_amount || '—'}</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scope Item</th>
+                  <th>Match</th>
+                  <th>Est. Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${comp.items.map((item, idx) => `
+                  <tr>
+                    <td>${scope.items[idx].text}</td>
+                    <td>
+                      <span style="font-size: 18px;">
+                        ${item.matched ? '✓' : (item.unclear ? '?' : '✗')}
+                      </span>
+                      <span style="font-size: 12px; color: var(--text-secondary);">${item.matchReason}</span>
+                    </td>
+                    <td>${item.estimated_cost ? '$' + item.estimated_cost : '—'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div style="margin-top: 15px; padding: 10px; background: rgba(255, 215, 0, 0.05); border-radius: 6px;">
+              <strong>Summary:</strong> ${comp.matched} matched, ${comp.missing} missing, ${comp.unclear} unclear
+              <br><strong>Total Gap Cost:</strong> $${comp.total_gap_cost}
+            </div>
+          </div>
+        `;
+      });
+
+      document.getElementById('comparison-content').innerHTML = html;
+
+      // Save comparisons for gaps tab
+      sessionStorage.setItem('last_comparison', JSON.stringify(comparisons));
+    }
+
+    function runComparison(scope, bids) {
+      const commonCosts = {
+        "permit": 2500, "inspection": 1500, "cleanup": 2000, "utility": 3000,
+        "safety": 5000, "dumpster": 1200, "mobilization": 5000, "insurance": 7500
+      };
+
+      return bids.map(bid => {
+        const items = scope.items.map(scopeItem => {
+          // Simple keyword matching
+          const scopeWords = scopeItem.text.toLowerCase().split(/\W+/);
+          let bestMatch = 0;
+          let matchedBidItem = null;
+
+          bid.items.forEach(bidItem => {
+            const bidWords = bidItem.text.toLowerCase().split(/\W+/);
+            const matches = scopeWords.filter(w => bidWords.includes(w)).length;
+            const score = matches / scopeWords.length;
+
+            if (score > bestMatch) {
+              bestMatch = score;
+              matchedBidItem = bidItem;
+            }
+          });
+
+          const matched = bestMatch >= 0.6;
+          const unclear = bestMatch >= 0.3 && bestMatch < 0.6;
+          const missing = bestMatch < 0.3;
+
+          let estimated_cost = null;
+          if (missing || unclear) {
+            // Try to estimate cost
+            for (const [keyword, cost] of Object.entries(commonCosts)) {
+              if (scopeItem.text.toLowerCase().includes(keyword)) {
+                estimated_cost = cost;
+                break;
+              }
+            }
+          }
+
+          return {
+            matched,
+            unclear,
+            missing,
+            score: bestMatch,
+            estimated_cost,
+            matchReason: matched ? 'Strong match' : (unclear ? 'Partial match' : 'No match')
+          };
+        });
+
+        const matched = items.filter(i => i.matched).length;
+        const missing = items.filter(i => i.missing).length;
+        const unclear = items.filter(i => i.unclear).length;
+        const total_gap_cost = items
+          .filter(i => i.missing || i.unclear)
+          .reduce((sum, i) => sum + (i.estimated_cost || 0), 0);
+
+        return {
+          ...bid,
+          items,
+          matched,
+          missing,
+          unclear,
+          total_gap_cost
+        };
+      });
+    }
+
+    // ==================== GAPS ====================
+    function loadGaps() {
+      const comparison = sessionStorage.getItem('last_comparison');
+      if (!comparison) {
+        document.getElementById('gaps-content').innerHTML = 
+          '<div class="alert alert-info">Run a comparison first (Compare tab).</div>';
+        return;
+      }
+
+      const comparisons = JSON.parse(comparison);
+      const project = getSelectedProject();
+
+      let html = `<h3>Scope Gaps for ${project.name}</h3>`;
+
+      let totalGaps = 0;
+      let totalCost = 0;
+
+      comparisons.forEach(comp => {
+        const gaps = comp.items
+          .map((item, idx) => ({ ...item, scopeText: project.scopes?.[idx]?.text || '' }))
+          .filter(item => item.missing || item.unclear);
+
+        totalGaps += gaps.length;
+        gaps.forEach(g => totalCost += g.estimated_cost || 0);
+
+        if (gaps.length > 0) {
+          html += `
+            <div class="card">
+              <h4>${comp.subcontractor_name}</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gap Type</th>
+                    <th>Scope Item</th>
+                    <th>Est. Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${gaps.map(gap => `
+                    <tr>
+                      <td><strong style="color: ${gap.missing ? 'var(--danger)' : 'var(--accent-orange)'}">${gap.missing ? 'MISSING' : 'UNCLEAR'}</strong></td>
+                      <td>${gap.scopeText}</td>
+                      <td>${gap.estimated_cost ? '$' + gap.estimated_cost : 'Manual review'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+      });
+
+      html += `
+        <div class="card" style="background: rgba(255, 215, 0, 0.05); border: 1px solid var(--accent-yellow);">
+          <h4>Total Summary</h4>
+          <p><strong>Total Gaps:</strong> ${totalGaps}</p>
+          <p><strong>Total Estimated Gap Cost:</strong> $${totalCost}</p>
+          <button class="button" onclick="exportGapReportPDF()" style="margin-top: 15px;">📥 Export as PDF</button>
+        </div>
+      `;
+
+      document.getElementById('gaps-content').innerHTML = html;
+    }
+
+    // ==================== UTILITIES ====================
+    function showAlert(message, type) {
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.textContent = message;
+      document.body.insertBefore(alert, document.body.firstChild);
+      setTimeout(() => alert.remove(), 3000);
+    }
+
+    function exportGapReportPDF() {
+      alert('PDF export coming soon! For now, use your browser Print → Save as PDF.');
+    }
+
+    function exportData() {
+      const data = getData();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'preconstruction-data-' + Date.now() + '.json';
+      a.click();
+      showAlert('Data exported!', 'success');
+    }
+
+    function importData() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const imported = JSON.parse(event.target.result);
+            localStorage.setItem(DATA_KEY, JSON.stringify(imported));
+            showAlert('Data imported!', 'success');
+            renderProjects();
+          } catch (err) {
+            showAlert('Import failed: ' + err.message, 'error');
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    function clearAllData() {
+      if (confirm('⚠️ This will permanently delete ALL data. Are you sure?')) {
+        if (confirm('Really? This cannot be undone.')) {
+          localStorage.removeItem(DATA_KEY);
+          initializeData();
+          renderProjects();
+          showAlert('All data cleared.', 'success');
+        }
+      }
+    }
+
+    // ==================== INIT ====================
+    initializeData();
+    renderProjects();
+  </script>
+</body>
+</html>
